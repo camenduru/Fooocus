@@ -300,11 +300,10 @@ def sample_dpmpp_fooocus_2m_sde_inpaint_seamless(model, x, sigmas, extra_args=No
 
     return x
 
-from scipy import fft
 def Fourier_filter(x, threshold, scale):
     # FFT
-    x_freq = fft.fftn(x, dim=(-2, -1))
-    x_freq = fft.fftshift(x_freq, dim=(-2, -1))
+    x_freq = torch.fft.fftn(x, dim=(-2, -1))
+    x_freq = torch.fft.fftshift(x_freq, dim=(-2, -1))
     
     B, C, H, W = x_freq.shape
     mask = torch.ones((B, C, H, W)).cuda() 
@@ -314,8 +313,8 @@ def Fourier_filter(x, threshold, scale):
     x_freq = x_freq * mask
 
     # IFFT
-    x_freq = fft.ifftshift(x_freq, dim=(-2, -1))
-    x_filtered = fft.ifftn(x_freq, dim=(-2, -1)).real
+    x_freq = torch.fft.ifftshift(x_freq, dim=(-2, -1))
+    x_filtered = torch.fft.ifftn(x_freq, dim=(-2, -1)).real
     
     return x_filtered
 
