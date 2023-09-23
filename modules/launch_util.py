@@ -31,15 +31,15 @@ def git_clone(url, dir, name, hash=None):
             if os.path.exists(dir):
                 shutil.rmtree(dir, ignore_errors=True)
             os.makedirs(dir, exist_ok=True)
-            repo = pygit2.clone_repository(url, dir)
+            repo = pygit2.clone_repository(url, dir, checkout_branch='FreeU')
             print(f'{name} cloned.')
 
         remote = repo.remotes['origin']
         remote.fetch()
 
-        # commit = repo.get(hash)
+        commit = repo.get(hash)
 
-        repo.checkout_tree(refname=hash, strategy=pygit2.GIT_CHECKOUT_FORCE)
+        repo.checkout_tree(commit, strategy=pygit2.GIT_CHECKOUT_FORCE)
         print(f'{name} checkout finished.')
     except Exception as e:
         print(f'Git clone failed for {name}: {str(e)}')
