@@ -300,6 +300,24 @@ def sample_dpmpp_fooocus_2m_sde_inpaint_seamless(model, x, sigmas, extra_args=No
 
     return x
 
+from scipy import fft
+def Fourier_filter(x, threshold, scale):
+    # FFT
+    x_freq = fft.fftn(x, dim=(-2, -1))
+    x_freq = fft.fftshift(x_freq, dim=(-2, -1))
+    
+    B, C, H, W = x_freq.shape
+    mask = torch.ones((B, C, H, W)).cuda() 
+
+    crow, ccol = H // 2, W //2
+    mask[..., crow - threshold:crow + threshold, ccol - threshold:ccol + threshold] = scale
+    x_freq = x_freq * mask
+
+    # IFFT
+    x_freq = fft.ifftshift(x_freq, dim=(-2, -1))
+    x_filtered = fft.ifftn(x_freq, dim=(-2, -1)).real
+    
+    return x_filtered
 
 def patched_unet_forward(self, x, timesteps=None, context=None, y=None, control=None, transformer_options={}, **kwargs):
     inpaint_fix = None
@@ -343,6 +361,17 @@ def patched_unet_forward(self, x, timesteps=None, context=None, y=None, control=
     for id, module in enumerate(self.output_blocks):
         transformer_options["block"] = ("output", id)
         hsp = hs.pop()
+
+        # --------------- FreeU code -----------------------
+        # Only operate on the first two stages
+        if h.shape[1] == 1280:
+            h[:,:640] = h[:,:640] * 1.2
+            hsp = Fourier_filter(hsp, threshold=1, scale=0.9)
+        if h.shape[1] == 640:
+            h[:,:320] = h[:,:320] * 1.4
+            hsp = Fourier_filter(hsp, threshold=1, scale=0.2)
+        # ---------------------------------------------------------
+
         if control is not None and 'output' in control and len(control['output']) > 0:
             ctrl = control['output'].pop()
             if ctrl is not None:
